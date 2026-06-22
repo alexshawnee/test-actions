@@ -8,52 +8,50 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Running tests (auto, like GitLab Prepare stage)"
+      - run: echo "tests (auto)"
 
-  # ---------------- SDK module branch ----------------
-  build-sdk-ios:
+  # ---- SDK targets (auto, after tests) ----
+  sdk-ios:
     needs: tests
     runs-on: ubuntu-latest
-    steps:
-      - run: echo "Build SDK iOS -> upload to AWS"
-
-  build-sdk-android:
+    steps: [{ run: echo "SDK iOS -> AWS" }]
+  sdk-android:
     needs: tests
     runs-on: ubuntu-latest
-    steps:
-      - run: echo "Build SDK Android -> upload to AWS"
-
-  # ---------------- HTTP module branch ----------------
-  build-http-mac:
+    steps: [{ run: echo "SDK Android -> AWS" }]
+  sdk-win:
     needs: tests
     runs-on: ubuntu-latest
-    steps:
-      - run: echo "Build HTTP macOS -> upload to AWS"
-
-  build-http-win:
+    steps: [{ run: echo "SDK Windows -> AWS" }]
+  sdk-mac:
     needs: tests
     runs-on: ubuntu-latest
-    steps:
-      - run: echo "Build HTTP Windows -> upload to AWS"
+    steps: [{ run: echo "SDK macOS -> AWS" }]
 
-  # ---------------- Products (manual "buttons" = approval gates) ----------------
+  # ---- Flutter targets (BUTTONS: each opens only when its SDK target is built) ----
+  flutter-ios:
+    needs: sdk-ios
+    runs-on: ubuntu-latest
+    environment: btn-flutter-ios
+    steps: [{ run: echo "Flutter iOS (pull SDK iOS from AWS)" }]
+  flutter-android:
+    needs: sdk-android
+    runs-on: ubuntu-latest
+    environment: btn-flutter-android
+    steps: [{ run: echo "Flutter Android" }]
+  flutter-win:
+    needs: sdk-win
+    runs-on: ubuntu-latest
+    environment: btn-flutter-win
+    steps: [{ run: echo "Flutter Windows" }]
+  flutter-mac:
+    needs: sdk-mac
+    runs-on: ubuntu-latest
+    environment: btn-flutter-mac
+    steps: [{ run: echo "Flutter macOS" }]
+
+  # ---- Flutter Plugin (auto, only after ALL flutter targets) ----
   flutter-plugin:
-    needs: [build-sdk-ios, build-sdk-android]
+    needs: [flutter-ios, flutter-android, flutter-win, flutter-mac]
     runs-on: ubuntu-latest
-    environment: btn-flutter-plugin
-    steps:
-      - run: echo "Assemble Flutter Plugin (SDK pulled from AWS)"
-
-  sample-ios:
-    needs: [build-sdk-ios]
-    runs-on: ubuntu-latest
-    environment: btn-sample-ios
-    steps:
-      - run: echo "Build iOS Sample (SDK pulled from AWS)"
-
-  verify-mac:
-    needs: [build-http-mac]
-    runs-on: ubuntu-latest
-    environment: btn-verify-mac
-    steps:
-      - run: echo "Build macOS Verify (HTTP pulled from AWS)"
+    steps: [{ run: echo "Flutter Plugin assembled from all targets" }]
