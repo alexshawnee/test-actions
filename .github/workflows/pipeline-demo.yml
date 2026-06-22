@@ -7,51 +7,44 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    steps:
-      - run: echo "tests (auto)"
+    steps: [{ run: echo "tests" }]
 
-  # ---- SDK targets (auto, after tests) ----
-  sdk-ios:
-    needs: tests
-    runs-on: ubuntu-latest
-    steps: [{ run: echo "SDK iOS -> AWS" }]
-  sdk-android:
-    needs: tests
-    runs-on: ubuntu-latest
-    steps: [{ run: echo "SDK Android -> AWS" }]
-  sdk-win:
-    needs: tests
-    runs-on: ubuntu-latest
-    steps: [{ run: echo "SDK Windows -> AWS" }]
-  sdk-mac:
-    needs: tests
-    runs-on: ubuntu-latest
-    steps: [{ run: echo "SDK macOS -> AWS" }]
+  # ---- SDK targets (auto). Each is built ONCE and feeds many consumers ----
+  sdk-ios:     { needs: tests, runs-on: ubuntu-latest, steps: [{ run: echo "SDK iOS -> AWS" }] }
+  sdk-android: { needs: tests, runs-on: ubuntu-latest, steps: [{ run: echo "SDK Android -> AWS" }] }
+  sdk-win:     { needs: tests, runs-on: ubuntu-latest, steps: [{ run: echo "SDK Windows -> AWS" }] }
+  sdk-mac:     { needs: tests, runs-on: ubuntu-latest, steps: [{ run: echo "SDK macOS -> AWS" }] }
 
-  # ---- Flutter targets (BUTTONS: each opens only when its SDK target is built) ----
-  flutter-ios:
-    needs: sdk-ios
-    runs-on: ubuntu-latest
-    environment: btn-flutter-ios
-    steps: [{ run: echo "Flutter iOS (pull SDK iOS from AWS)" }]
-  flutter-android:
-    needs: sdk-android
-    runs-on: ubuntu-latest
-    environment: btn-flutter-android
-    steps: [{ run: echo "Flutter Android" }]
-  flutter-win:
-    needs: sdk-win
-    runs-on: ubuntu-latest
-    environment: btn-flutter-win
-    steps: [{ run: echo "Flutter Windows" }]
-  flutter-mac:
-    needs: sdk-mac
-    runs-on: ubuntu-latest
-    environment: btn-flutter-mac
-    steps: [{ run: echo "Flutter macOS" }]
+  # ---- Consumers fan out from the SAME sdk target ----
+  flutter-ios:     { needs: sdk-ios,     runs-on: ubuntu-latest, steps: [{ run: echo "Flutter iOS" }] }
+  flutter-android: { needs: sdk-android, runs-on: ubuntu-latest, steps: [{ run: echo "Flutter Android" }] }
+  flutter-win:     { needs: sdk-win,     runs-on: ubuntu-latest, steps: [{ run: echo "Flutter Windows" }] }
+  flutter-mac:     { needs: sdk-mac,     runs-on: ubuntu-latest, steps: [{ run: echo "Flutter macOS" }] }
 
-  # ---- Flutter Plugin (auto, only after ALL flutter targets) ----
+  sample-ios:      { needs: sdk-ios,     runs-on: ubuntu-latest, steps: [{ run: echo "iOS Sample" }] }
+  sample-android:  { needs: sdk-android, runs-on: ubuntu-latest, steps: [{ run: echo "Android Sample" }] }
+
+  react-ios:       { needs: sdk-ios,     runs-on: ubuntu-latest, steps: [{ run: echo "React iOS" }] }
+  react-android:   { needs: sdk-android, runs-on: ubuntu-latest, steps: [{ run: echo "React Android" }] }
+
+  # ---- Plugins (fan-in) ----
   flutter-plugin:
     needs: [flutter-ios, flutter-android, flutter-win, flutter-mac]
     runs-on: ubuntu-latest
-    steps: [{ run: echo "Flutter Plugin assembled from all targets" }]
+    steps: [{ run: echo "Flutter Plugin assembled" }]
+  react-plugin:
+    needs: [react-ios, react-android]
+    runs-on: ubuntu-latest
+    steps: [{ run: echo "React Plugin assembled" }]
+
+  # ---- Publish (BUTTONS: approval before publishing) ----
+  publish-flutter:
+    needs: flutter-plugin
+    runs-on: ubuntu-latest
+    environment: publish-flutter
+    steps: [{ run: echo "Publish Flutter Plugin" }]
+  publish-react:
+    needs: react-plugin
+    runs-on: ubuntu-latest
+    environment: publish-react
+    steps: [{ run: echo "Publish React Plugin" }]
